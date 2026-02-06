@@ -37,6 +37,9 @@ ENV/
 .env
 .env.local
 
+# Service account keys (GCP credentials)
+home-dev-*.json
+
 # Data files
 data/*.pdf
 data/*.txt

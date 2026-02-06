@@ -1,19 +1,20 @@
 import express from 'express';
-import Anthropic from '@anthropic-ai/sdk';
+import { VertexAI } from '@google-cloud/vertexai';
 import { z } from 'zod';
 import 'dotenv/config';
 
 const app = express();
 app.use(express.json());
 
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+// Initialize Vertex AI client
+const vertexAI = new VertexAI({
+  project: process.env.GOOGLE_PROJECT_ID,
+  location: process.env.GOOGLE_LOCATION || 'us-central1',
 });
 
 // Configuration
 const CONFIG = {
-  model: process.env.MODEL || 'claude-3-5-sonnet-20241022',
+  model: process.env.MODEL || 'gemini-1.5-flash-002',
   temperature: parseFloat(process.env.TEMPERATURE || '0.0'),
   maxTokens: parseInt(process.env.MAX_TOKENS || '1024'),
   port: parseInt(process.env.PORT || '3000'),
@@ -66,29 +67,33 @@ app.post('/ask', async (req, res) => {
 
     console.log(`[${new Date().toISOString()}] Processing question: "${question}"`);
 
-    // Call Claude API
-    const message = await anthropic.messages.create({
+    // Get the generative model
+    const model = vertexAI.getGenerativeModel({
       model: CONFIG.model,
-      max_tokens: CONFIG.maxTokens,
-      temperature: CONFIG.temperature,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+      generationConfig: {
+        maxOutputTokens: CONFIG.maxTokens,
+        temperature: CONFIG.temperature,
+      },
     });
 
-    // Extract text content from Claude response
-    const responseText = message.content
-      .filter(block => block.type === 'text')
-      .map(block => block.text)
-      .join('');
+    // Call Gemini API
+    const result = await model.generateContent(prompt);
+    const geminiResponse = result.response;
+
+    // Extract text content from Gemini response
+    const responseText = geminiResponse.candidates[0].content.parts[0].text;
+
+    // Strip markdown code fences if present
+    const cleanedText = responseText
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/, '')
+      .replace(/\s*```$/, '')
+      .trim();
 
     // Parse and validate LLM response as JSON
     let llmResponse;
     try {
-      llmResponse = JSON.parse(responseText);
+      llmResponse = JSON.parse(cleanedText);
     } catch (parseError) {
       console.error('Failed to parse LLM response as JSON:', responseText);
       return res.status(500).json({
@@ -97,13 +102,17 @@ app.post('/ask', async (req, res) => {
       });
     }
 
+    // Calculate total tokens used
+    const tokensUsed = (geminiResponse.usageMetadata?.promptTokenCount || 0) +
+                      (geminiResponse.usageMetadata?.candidatesTokenCount || 0);
+
     // Validate response structure
     const response = {
       answer: llmResponse.answer || responseText,
       metadata: {
         model: CONFIG.model,
         temperature: CONFIG.temperature,
-        tokens_used: message.usage.input_tokens + message.usage.output_tokens,
+        tokens_used: tokensUsed,
       },
     };
 
