@@ -1,0 +1,58 @@
+{
+  "description": "Week 2: Prompt regression test cases",
+  "version": "v1",
+  "test_cases": [
+    {
+      "id": "basic_math",
+      "description": "Simple factual question",
+      "input": {
+        "question": "What is 2+2?",
+        "context": null
+      },
+      "expected_behavior": {
+        "has_answer_field": true,
+        "answer_not_empty": true,
+        "answer_contains": ["4"],
+        "max_tokens": 220,
+        "max_words": 20,
+        "json_valid": true,
+        "has_metadata": true,
+        "metadata_has_prompt_version": true
+      }
+    },
+    {
+      "id": "with_context",
+      "description": "Context-aware question",
+      "input": {
+        "question": "What color is mentioned?",
+        "context": "The car is red."
+      },
+      "expected_behavior": {
+        "has_answer_field": true,
+        "answer_not_empty": true,
+        "answer_contains": ["red"],
+        "max_tokens": 220,
+        "max_words": 20,
+        "json_valid": true,
+        "uses_context": true
+      }
+    },
+    {
+      "id": "python_question",
+      "description": "General knowledge question",
+      "input": {
+        "question": "What is Python?",
+        "context": null
+      },
+      "expected_behavior": {
+        "has_answer_field": true,
+        "answer_not_empty": true,
+        "answer_contains": ["programming", "language"],
+        "max_tokens": 250,
+        "max_words": 50,
+        "json_valid": true,
+        "concise": true
+      }
+    }
+  ]
+}

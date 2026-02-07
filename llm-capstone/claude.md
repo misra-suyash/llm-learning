@@ -20,10 +20,13 @@
 - [x] Extract prompts to versioned files (`prompts/v1/`)
 - [x] Prompt loader utility with version tracking
 - [x] Token usage breakdown logging
+- [x] Test infrastructure (fixtures, test runner, npm scripts)
+- [x] Mocked tests passing (3/3 with fixtures, no API calls)
 
-**In Progress:**
-- [ ] Prompt regression tests (`evals/prompts/`)
-- [ ] CI for prompt testing
+**In Progress (~80% Week 2 Complete):**
+- [ ] GitHub Actions CI workflow
+- [ ] Create prompts/v2 and observe test failures
+- [ ] Document learnings (progress gate)
 
 ## Configuration
 
