@@ -2,6 +2,7 @@ import express from 'express';
 import { VertexAI } from '@google-cloud/vertexai';
 import { z } from 'zod';
 import 'dotenv/config';
+import { loadPrompts, buildUserPrompt } from './prompt-loader.js';
 
 const app = express();
 app.use(express.json());
@@ -18,7 +19,13 @@ const CONFIG = {
   temperature: parseFloat(process.env.TEMPERATURE || '0.0'),
   maxTokens: parseInt(process.env.MAX_TOKENS || '1024'),
   port: parseInt(process.env.PORT || '3000'),
+  promptVersion: process.env.PROMPT_VERSION || 'v1', // Week 2: Configurable prompt version
 };
+
+// Week 2: Load versioned prompts from files
+const PROMPTS = loadPrompts(CONFIG.promptVersion);
+console.log(`Loaded prompts version: ${PROMPTS.version}`);
+
 
 // Request schema validation
 const AskRequestSchema = z.object({
@@ -33,22 +40,9 @@ const AskResponseSchema = z.object({
     model: z.string(),
     temperature: z.number(),
     tokens_used: z.number().optional(),
+    prompt_version: z.string(), // Week 2: Track which prompt version was used
   }),
 });
-
-// Hard-coded prompt (Week 0-1: intentionally simple)
-function buildPrompt(question, context) {
-  const contextSection = context
-    ? `Context:\n${context}\n\n`
-    : '';
-
-  return `${contextSection}Question: ${question}
-
-Answer the question clearly and concisely. Provide your response in valid JSON format with the following structure:
-{
-  "answer": "your answer here"
-}`;
-}
 
 // POST /ask endpoint
 app.post('/ask', async (req, res) => {
@@ -63,21 +57,24 @@ app.post('/ask', async (req, res) => {
     }
 
     const { question, context } = validationResult.data;
-    const prompt = buildPrompt(question, context);
 
-    console.log(`[${new Date().toISOString()}] Processing question: "${question}"`);
+    // Week 2: Build user prompt from versioned template
+    const userPrompt = buildUserPrompt(PROMPTS.userTemplate, question, context);
 
-    // Get the generative model
+    console.log(`[${new Date().toISOString()}] Processing question: "${question}" (prompt: ${PROMPTS.version})`);
+
+    // Week 2: Get the generative model with versioned system instruction
     const model = vertexAI.getGenerativeModel({
       model: CONFIG.model,
       generationConfig: {
         maxOutputTokens: CONFIG.maxTokens,
         temperature: CONFIG.temperature,
       },
+      systemInstruction: PROMPTS.systemInstruction,
     });
 
     // Call Gemini API
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent(userPrompt);
     const geminiResponse = result.response;
 
     // Extract text content from Gemini response
@@ -103,8 +100,12 @@ app.post('/ask', async (req, res) => {
     }
 
     // Calculate total tokens used
-    const tokensUsed = (geminiResponse.usageMetadata?.promptTokenCount || 0) +
-                      (geminiResponse.usageMetadata?.candidatesTokenCount || 0);
+    const promptTokens = geminiResponse.usageMetadata?.promptTokenCount || 0;
+    const responseTokens = geminiResponse.usageMetadata?.candidatesTokenCount || 0;
+    const tokensUsed = promptTokens + responseTokens;
+
+    // Week 2: Log token breakdown for analysis
+    console.log(`  Tokens - Prompt: ${promptTokens}, Response: ${responseTokens}, Total: ${tokensUsed}`);
 
     // Validate response structure
     const response = {
@@ -113,6 +114,7 @@ app.post('/ask', async (req, res) => {
         model: CONFIG.model,
         temperature: CONFIG.temperature,
         tokens_used: tokensUsed,
+        prompt_version: PROMPTS.version, // Week 2: Track which prompt version was used
       },
     };
 
@@ -149,6 +151,7 @@ app.listen(CONFIG.port, () => {
   console.log(`\n🚀 LLM Capstone Service running on port ${CONFIG.port}`);
   console.log(`📊 Model: ${CONFIG.model}`);
   console.log(`🌡️  Temperature: ${CONFIG.temperature}`);
+  console.log(`📝 Prompt Version: ${PROMPTS.version}`); // Week 2: Show prompt version
   console.log(`\nEndpoints:`);
   console.log(`  POST http://localhost:${CONFIG.port}/ask`);
   console.log(`  GET  http://localhost:${CONFIG.port}/health\n`);

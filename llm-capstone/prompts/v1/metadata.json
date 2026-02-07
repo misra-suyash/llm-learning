@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "created": "2026-02-05",
+  "description": "Initial prompt version with systemInstruction separation",
+  "changes": [
+    "Separated system instructions from user prompts",
+    "Explicit JSON format requirements",
+    "Context-aware answering instructions"
+  ],
+  "performance": {
+    "tested_on": "gemini-2.0-flash-exp",
+    "json_parse_success_rate": "baseline"
+  }
+}
