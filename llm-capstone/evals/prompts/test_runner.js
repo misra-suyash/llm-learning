@@ -56,27 +56,36 @@ async function getResponse(testCase, fixtures) {
 function validateBehavior(response, behavior) {
   const results = [];
 
-  if (behavior.json_valid) {
+  if (behavior.json_valid !== undefined) {
+    const isValidJSON = typeof response === 'object' && response !== null;
     results.push({
       check: 'json_valid',
-      passed: typeof response === 'object' && response !== null,
-      message: 'Response is valid JSON',
+      passed: isValidJSON === behavior.json_valid,
+      message: behavior.json_valid
+        ? 'Response is valid JSON'
+        : 'Response is not valid JSON',
     });
   }
 
-  if (behavior.has_answer_field) {
+  if (behavior.has_answer_field !== undefined) {
+    const hasAnswer = 'answer' in response;
     results.push({
       check: 'has_answer_field',
-      passed: 'answer' in response,
-      message: 'Response has answer field',
+      passed: hasAnswer === behavior.has_answer_field,
+      message: behavior.has_answer_field
+        ? 'Response has answer field'
+        : 'Response does not have answer field',
     });
   }
 
-  if (behavior.answer_not_empty) {
+  if (behavior.answer_not_empty !== undefined) {
+    const notEmpty = response.answer && response.answer.length > 0;
     results.push({
       check: 'answer_not_empty',
-      passed: response.answer && response.answer.length > 0,
-      message: 'Answer is not empty',
+      passed: notEmpty === behavior.answer_not_empty,
+      message: behavior.answer_not_empty
+        ? 'Answer is not empty'
+        : 'Answer is empty',
     });
   }
 
@@ -111,46 +120,61 @@ function validateBehavior(response, behavior) {
     });
   }
 
-  if (behavior.has_metadata) {
+  if (behavior.has_metadata !== undefined) {
+    const hasMetadata = 'metadata' in response;
     results.push({
       check: 'has_metadata',
-      passed: 'metadata' in response,
-      message: 'Response has metadata field',
+      passed: hasMetadata === behavior.has_metadata,
+      message: behavior.has_metadata
+        ? 'Response has metadata field'
+        : 'Response does not have metadata field',
     });
   }
 
-  if (behavior.metadata_has_prompt_version) {
+  if (behavior.metadata_has_prompt_version !== undefined) {
+    const hasPromptVersion = response.metadata?.prompt_version !== undefined;
     results.push({
       check: 'metadata_has_prompt_version',
-      passed: response.metadata?.prompt_version !== undefined,
-      message: 'Metadata includes prompt_version',
+      passed: hasPromptVersion === behavior.metadata_has_prompt_version,
+      message: behavior.metadata_has_prompt_version
+        ? 'Metadata includes prompt_version'
+        : 'Metadata does not include prompt_version',
     });
   }
 
-  if (behavior.no_markdown_fences) {
+  if (behavior.no_markdown_fences !== undefined) {
     const hasMarkdown = /```/.test(response.answer || '');
+    const noMarkdown = !hasMarkdown;
     results.push({
       check: 'no_markdown_fences',
-      passed: !hasMarkdown,
-      message: 'Answer does not contain markdown code fences',
+      passed: noMarkdown === behavior.no_markdown_fences,
+      message: behavior.no_markdown_fences
+        ? 'Answer does not contain markdown code fences'
+        : 'Answer contains markdown code fences',
     });
   }
 
-  if (behavior.uses_context) {
-    // This is a soft check - we assume if context was provided and answer is relevant, it was used
+  if (behavior.uses_context !== undefined) {
+    // Soft check - true means we expect context to be used (validated by answer_contains)
+    // false means we don't expect context usage (hard to validate programmatically)
     results.push({
       check: 'uses_context',
-      passed: true, // Validated by answer_contains
-      message: 'Context appears to be used (validated by content check)',
+      passed: behavior.uses_context, // Pass if expected, fail if not expected
+      message: behavior.uses_context
+        ? 'Context appears to be used (validated by content check)'
+        : 'Context should not be used',
     });
   }
 
-  if (behavior.concise) {
+  if (behavior.concise !== undefined) {
     const words = (response.answer || '').split(/\s+/).length;
+    const isConcise = words <= 30; // Concise = <= 30 words
     results.push({
       check: 'concise',
-      passed: words <= 30, // Concise = <= 30 words
-      message: `Answer is concise (${words} words)`,
+      passed: isConcise === behavior.concise,
+      message: behavior.concise
+        ? `Answer is concise (${words} words)`
+        : `Answer is verbose (${words} words)`,
     });
   }
 

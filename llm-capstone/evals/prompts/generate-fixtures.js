@@ -1,6 +1,6 @@
 // Week 2: Generate fixture responses from live API
 // Run this ONCE locally to capture baseline responses
-import { writeFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -8,32 +8,22 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const API_URL = 'http://localhost:3000/ask';
-const DELAY_MS = 65000; // 65 seconds between requests (respect rate limits!)
+const DELAY_MS = 65000; // 65 seconds between requests (gemini-2.0-flash-exp: 1 req/min limit)
+const PROMPT_VERSION = process.env.PROMPT_VERSION || 'v1';
 
-// Test cases to generate fixtures for
-const TEST_CASES = [
-  {
-    id: 'basic_math',
-    input: {
-      question: 'What is 2+2?',
-      context: null,
-    },
-  },
-  {
-    id: 'with_context',
-    input: {
-      question: 'What color is mentioned?',
-      context: 'The car is red.',
-    },
-  },
-  {
-    id: 'python_question',
-    input: {
-      question: 'What is Python?',
-      context: null,
-    },
-  },
-];
+// Load test cases from test_cases.json (single source of truth)
+function loadTestCases() {
+  const path = join(__dirname, 'test_cases.json');
+  const testConfig = JSON.parse(readFileSync(path, 'utf-8'));
+
+  // Convert to format expected by generator
+  return testConfig.test_cases.map(tc => ({
+    id: tc.id,
+    input: tc.input,
+  }));
+}
+
+const TEST_CASES = loadTestCases();
 
 async function callAPI(input) {
   const response = await fetch(API_URL, {
@@ -61,7 +51,7 @@ async function generateFixtures() {
 
   const fixtures = {
     generated_at: new Date().toISOString(),
-    prompt_version: 'v1',
+    prompt_version: PROMPT_VERSION,
     test_cases: {},
   };
 
@@ -93,7 +83,7 @@ async function generateFixtures() {
   }
 
   // Save to file
-  const fixturesPath = join(__dirname, 'fixtures', 'v1_responses.json');
+  const fixturesPath = join(__dirname, 'fixtures', `${PROMPT_VERSION}_responses.json`);
   writeFileSync(fixturesPath, JSON.stringify(fixtures, null, 2));
 
   console.log(`\n✅ Fixtures saved to: ${fixturesPath}`);

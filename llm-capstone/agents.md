@@ -12,10 +12,13 @@
 ## 🚨 Critical Rules
 
 **Rate Limiting:**
-- ⚠️ **MAX 1 API REQUEST PER SESSION**
-- Check: "Did I already call /ask this session?"
-- If yes → DO NOT test again
-- If needed → Warn user, defer testing, or wait 60+ seconds
+- ⚠️ **WAIT 60+ SECONDS BETWEEN API REQUESTS**
+- Multiple /ask calls per session: ✅ ALLOWED
+- Burst requests (< 60s apart): ❌ TRIGGERS 429 ERROR
+- Before calling /ask: Check when last call was made
+- If < 60s ago → Warn user about rate limit, suggest waiting
+- If ≥ 60s ago → Safe to proceed
+- Prefer fixtures/mock mode for testing to avoid rate limits entirely
 
 **Security:**
 - Never commit credentials (service account keys, .env)
@@ -38,7 +41,8 @@
 **Testing:**
 - Prefer mocks/unit tests over live API
 - Warn before any /ask test
-- Max 1 API call per session
+- Ensure 60+ seconds between live API calls
+- Use fixtures/mock mode to avoid rate limits
 
 ## Communication
 
@@ -51,10 +55,10 @@
 ## Red Flags
 
 Stop if:
-- ❌ Multiple API calls per session
+- ❌ Burst API calls (< 60s apart)
 - ❌ Implementing future weeks
 - ❌ Editing without reading
-- ❌ Ignoring rate limits
+- ❌ Ignoring rate limits (60+ second rule)
 
 ## Quick Commands
 

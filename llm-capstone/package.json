@@ -8,8 +8,10 @@
     "start": "node service/index.js",
     "dev": "node --watch service/index.js",
     "test": "TEST_MODE=mock node evals/prompts/test_runner.js",
+    "test:prompts": "TEST_MODE=mock node evals/prompts/test_runner.js",
     "test:live": "TEST_MODE=live node evals/prompts/test_runner.js",
-    "test:generate-fixtures": "node evals/prompts/generate-fixtures.js"
+    "test:generate-fixtures": "node evals/prompts/generate-fixtures.js",
+    "test:generate-selective": "node evals/prompts/generate-fixtures-selective.js"
   },
   "keywords": ["llm", "rag", "ai"],
   "author": "",
